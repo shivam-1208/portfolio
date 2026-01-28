@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>shivam@portfolio:~$</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Major+Mono+Display&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Fira Code', monospace;
+            background: #000;
+            color: #0f0;
+            overflow: hidden;
+            perspective: 1000px;
+        }
+
+        /* Scanline Effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 0, 0.03) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(0, 255, 0, 0.03) 3px
+            );
+            pointer-events: none;
+            z-index: 1000;
+            animation: scanline 10s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(20px); }
+        }
+
+        /* CRT Glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.3) 100%);
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        /* 3D Terminal Container */
+        .terminal-wrapper {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotateX(2deg);
+            width: 90vw;
+            max-width: 1200px;
+            height: 85vh;
+            transform-style: preserve-3d;
+            animation: floatIn 2s ease-out;
+        }
+
+        @keyframes floatIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) rotateX(45deg) translateZ(-500px);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) rotateX(2deg) translateZ(0);
+            }
+        }
+
+        .terminal {
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 10, 0, 0.95);
+            border: 3px solid #0f0;
+            border-radius: 8px;
+            box-shadow: 
+                0 0 40px rgba(0, 255, 0, 0.4),
+                inset 0 0 100px rgba(0, 255, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Terminal Header */
+        .terminal-header {
+            background: linear-gradient(180deg, #001100 0%, #000800 100%);
+            padding: 12px 20px;
+            border-bottom: 2px solid #0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .terminal-title {
+            font-family: 'Major Mono Display', monospace;
+            font-size: 1.2rem;
+            color: #0f0;
+            text-shadow: 0 0 10px #0f0;
+        }
+
+        .terminal-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .terminal-button {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 1px solid #0f0;
+            box-shadow: 0 0 5px #0f0;
+        }
+
+        .btn-close { background: #f00; border-color: #f00; box-shadow: 0 0 5px #f00; }
+        .btn-minimize { background: #ff0; border-color: #ff0; box-shadow: 0 0 5px #ff0; }
+        .btn-maximize { background: #0f0; }
+
+        /* Terminal Content */
+        .terminal-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .terminal-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .terminal-content::-webkit-scrollbar-track {
+            background: #000;
+        }
+
+        .terminal-content::-webkit-scrollbar-thumb {
+            background: #0f0;
+            border-radius: 4px;
+        }
+
+        /* Output Lines */
+        .output-line {
+            margin-bottom: 4px;
+            animation: typeLine 0.05s;
+        }
+
+        @keyframes typeLine {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .prompt {
+            color: #00ff00;
+            margin-right: 8px;
+        }
+
+        .command {
+            color: #00ffff;
+        }
+
+        .output {
+            color: #0f0;
+            margin-left: 0;
+        }
+
+        .error {
+            color: #ff0000;
+        }
+
+        .success {
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        .info {
+            color: #00ffff;
+        }
+
+        .warning {
+            color: #ffff00;
+        }
+
+        /* ASCII Art */
+        .ascii-art {
+            color: #0f0;
+            font-size: 0.7rem;
+            line-height: 1.2;
+            white-space: pre;
+            text-shadow: 0 0 5px #0f0;
+        }
+
+        /* Input Container */
+        .input-container {
+            padding: 15px 20px;
+            background: rgba(0, 20, 0, 0.8);
+            border-top: 2px solid #0f0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .input-prompt {
+            color: #0f0;
+            font-weight: bold;
+        }
+
+        #terminal-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #0f0;
+            font-family: 'Fira Code', monospace;
+            font-size: 1rem;
+            caret-color: #0f0;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 18px;
+            background: #0f0;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+
+        /* Section Styles */
+        .section-header {
+            color: #00ffff;
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin: 15px 0 10px 0;
+            text-decoration: underline;
+        }
+
+        .item {
+            margin: 10px 0;
+            padding-left: 20px;
+            border-left: 2px solid #0f0;
+        }
+
+        .item-title {
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        .item-subtitle {
+            color: #00ffff;
+            font-size: 0.9rem;
+        }
+
+        .item-date {
+            color: #ffff00;
+            font-size: 0.85rem;
+        }
+
+        .bullet-list {
+            list-style: none;
+            margin-top: 5px;
+        }
+
+        .bullet-list li {
+            padding-left: 15px;
+            position: relative;
+            color: #0f0;
+            margin: 3px 0;
+        }
+
+        .bullet-list li::before {
+            content: '>';
+            position: absolute;
+            left: 0;
+            color: #00ff00;
+        }
+
+        .skill-tag {
+            display: inline-block;
+            padding: 3px 8px;
+            margin: 3px;
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #0f0;
+            border-radius: 3px;
+            color: #0f0;
+            font-size: 0.85rem;
+        }
+
+        /* Help Menu */
+        .help-grid {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .help-command {
+            color: #00ffff;
+            font-weight: bold;
+        }
+
+        .help-description {
+            color: #0f0;
+        }
+
+        /* Loading Animation */
+        .loading {
+            color: #0f0;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* Mobile Hint */
+        .mobile-hint {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #0f0;
+            padding: 10px 20px;
+            border-radius: 5px;
+            z-index: 1001;
+            animation: fadeInOut 3s ease-in-out infinite;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+            .terminal-wrapper {
+                width: 95vw;
+                height: 90vh;
+            }
+
+            .terminal-content {
+                font-size: 0.85rem;
+                padding: 15px;
+            }
+
+            .ascii-art {
+                font-size: 0.5rem;
+            }
+
+            .mobile-hint {
+                display: block;
+            }
+        }
+
+        /* Link Styling */
+        a {
+            color: #00ffff;
+            text-decoration: none;
+            border-bottom: 1px dashed #00ffff;
+        }
+
+        a:hover {
+            color: #00ff00;
+            border-bottom-color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal-wrapper">
+        <div class="terminal">
+            <div class="terminal-header">
+                <div class="terminal-title">SHIVAM.TERMINAL v1.0</div>
+                <div class="terminal-buttons">
+                    <div class="terminal-button btn-close"></div>
+                    <div class="terminal-button btn-minimize"></div>
+                    <div class="terminal-button btn-maximize"></div>
+                </div>
+            </div>
+            
+            <div class="terminal-content" id="terminal-output">
+                <!-- Content will be added by JavaScript -->
+            </div>
+            
+            <div class="input-container">
+                <span class="input-prompt">shivam@portfolio:~$</span>
+                <input type="text" id="terminal-input" autocomplete="off" autofocus>
+            </div>
+        </div>
+    </div>
+
+    <div class="mobile-hint">💡 Tap to type commands</div>
+
+    <script>
+        const terminalOutput = document.getElementById('terminal-output');
+        const terminalInput = document.getElementById('terminal-input');
+        const commandHistory = [];
+        let historyIndex = -1;
+
+        // Portfolio data
+        const portfolio = {
+            profile: {
+                name: "Shivam",
+                role: "AI & Backend Engineer",
+                email: "shivam.1208b@gmail.com",
+                phone: "+91 7903830078",
+                location: "Chennai, India",
+                github: "github.com/shivam-1208",
+                summary: "Results-driven AI & Backend Engineer with 3+ years of experience in building scalable APIs, LLM-powered systems, and production-ready AI architectures. Specialized in FastAPI, RAG pipelines, and AI agent development with focus on performance optimization."
+            },
+            experience: [
+                {
+                    title: "AI & ML Engineering (Freelance)",
+                    company: "AceInterview",
+                    period: "2022 – Present | 3+ years",
+                    achievements: [
+                        "Built custom TF-IDF RAG achieving 76% memory optimization (500MB→120MB)",
+                        "Integrated HeyGen streaming avatar with less latency and 98%+ stability",
+                        "Designed 8+ prompt templates with auto-framework detection (STAR/CAR)",
+                        "Achieved 99%+ uptime serving 1000+ concurrent users with less than 2s response",
+                        "Implemented Razorpay payment integration with premium model"
+                    ]
+                },
+                {
+                    title: "AI & ML Intern",
+                    company: "SmartInternz",
+                    period: "Jun – Jul 2024",
+                    achievements: [
+                        "Improved model accuracy by 25–30% through hyperparameter tuning",
+                        "Deployed AI models achieving 95% accuracy and 90% user satisfaction",
+                        "Reduced development time by 30% through cross-functional collaboration"
+                    ]
+                }
+            ],
+            projects: [
+                {
+                    name: "AI Radiology Assistant for Chest X-ray Diagnosis",
+                    details: [
+                        "Engineered CNN + LLM pipeline improving diagnostic accuracy by 22%",
+                        "Transformed model outputs into structured medical reports using LLMs",
+                        "Built diagnosis-aware chatbot with context-aware, safety-grounded prompting",
+                        "Enabled human-in-the-loop validation for doctor review and approval"
+                    ]
+                },
+                {
+                    name: "Codrob — AI Code Assistant",
+                    details: [
+                        "Built LLM-powered competitive coding platform with real-time battles",
+                        "Integrated Groq LLMs for code generation, debugging, and AI judging",
+                        "Engineered fast LLM-based code evaluator as alternative to test runners",
+                        "Automated problem generation with structured JSON, test cases, and hints"
+                    ]
+                }
+            ],
+            skills: {
+                "Languages": ["Python", "C", "C++", "Java", "SQL"],
+                "Frameworks": ["FastAPI", "Flask", "LangChain", "LangGraph"],
+                "AI/ML": ["RAG Pipelines", "LLM APIs", "Prompt Engineering", "Scikit-learn"],
+                "Databases": ["MongoDB", "MySQL", "SQLite"],
+                "Tools": ["Postman", "Cloud Computing", "Gemini API"],
+                "Web": ["HTML", "CSS", "JavaScript"],
+                "Soft Skills": ["Problem-solving", "Team Collaboration", "Agile Development", "System Architecture"]
+            },
+            education: {
+                degree: "B.Tech in Computer Science and Engineering",
+                institution: "Vellore Institute of Technology, Chennai",
+                period: "2022 – 2026"
+            },
+            certifications: [
+                "AI using Google TensorFlow — Google Developers",
+                "AI & ML for Geospatial Data Analysis — ISRO"
+            ],
+            languages: ["English (Fluent)", "Hindi (Native)"]
+        };
+
+        // ASCII Art
+        const asciiArt = `
+    ███████╗██╗  ██╗██╗██╗   ██╗ █████╗ ███╗   ███╗
+    ██╔════╝██║  ██║██║██║   ██║██╔══██╗████╗ ████║
+    ███████╗███████║██║██║   ██║███████║██╔████╔██║
+    ╚════██║██╔══██║██║╚██╗ ██╔╝██╔══██║██║╚██╔╝██║
+    ███████║██║  ██║██║ ╚████╔╝ ██║  ██║██║ ╚═╝ ██║
+    ╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝  ╚═╝  ╚═╝╚═╝     ╚═╝
+    `;
+
+        // Commands
+        const commands = {
+            help: () => {
+                return `
+<div class="help-grid">
+    <span class="help-command">help</span><span class="help-description">Show this help menu</span>
+    <span class="help-command">about</span><span class="help-description">Display profile information</span>
+    <span class="help-command">experience</span><span class="help-description">Show work experience</span>
+    <span class="help-command">projects</span><span class="help-description">List all projects</span>
+    <span class="help-command">skills</span><span class="help-description">Display technical skills</span>
+    <span class="help-command">education</span><span class="help-description">Show education details</span>
+    <span class="help-command">certifications</span><span class="help-description">List certifications</span>
+    <span class="help-command">contact</span><span class="help-description">Get contact information</span>
+    <span class="help-command">all</span><span class="help-description">Display complete portfolio</span>
+    <span class="help-command">clear</span><span class="help-description">Clear terminal screen</span>
+    <span class="help-command">whoami</span><span class="help-description">Display current user</span>
+    <span class="help-command">ls</span><span class="help-description">List available sections</span>
+</div>
+<div class="info" style="margin-top: 15px;">💡 Tip: Use arrow keys to navigate command history</div>
+                `;
+            },
+            
+            about: () => {
+                return `
+<div class="section-header">▸ PROFILE</div>
+<div class="output">
+<strong class="success">Name:</strong> ${portfolio.profile.name}
+<strong class="success">Role:</strong> ${portfolio.profile.role}
+<strong class="success">Location:</strong> ${portfolio.profile.location}
+
+${portfolio.profile.summary}
+</div>
+                `;
+            },
+
+            experience: () => {
+                let output = '<div class="section-header">▸ WORK EXPERIENCE</div>';
+                portfolio.experience.forEach((exp, index) => {
+                    output += `
+<div class="item">
+    <div class="item-title">${exp.title}</div>
+    <div class="item-subtitle">${exp.company}</div>
+    <div class="item-date">${exp.period}</div>
+    <ul class="bullet-list">
+    ${exp.achievements.map(achievement => `<li>${achievement}</li>`).join('')}
+    </ul>
+</div>
+                    `;
+                });
+                return output;
+            },
+
+            projects: () => {
+                let output = '<div class="section-header">▸ PROJECTS</div>';
+                portfolio.projects.forEach((project, index) => {
+                    output += `
+<div class="item">
+    <div class="item-title">${project.name}</div>
+    <ul class="bullet-list">
+    ${project.details.map(detail => `<li>${detail}</li>`).join('')}
+    </ul>
+</div>
+                    `;
+                });
+                return output;
+            },
+
+            skills: () => {
+                let output = '<div class="section-header">▸ TECHNICAL SKILLS</div><div style="margin-top: 10px;">';
+                for (const [category, skillList] of Object.entries(portfolio.skills)) {
+                    output += `<div style="margin: 10px 0;"><strong class="info">${category}:</strong><br>`;
+                    skillList.forEach(skill => {
+                        output += `<span class="skill-tag">${skill}</span>`;
+                    });
+                    output += '</div>';
+                }
+                output += '</div>';
+                return output;
+            },
+
+            education: () => {
+                return `
+<div class="section-header">▸ EDUCATION</div>
+<div class="item">
+    <div class="item-title">${portfolio.education.degree}</div>
+    <div class="item-subtitle">${portfolio.education.institution}</div>
+    <div class="item-date">${portfolio.education.period}</div>
+</div>
+                `;
+            },
+
+            certifications: () => {
+                let output = '<div class="section-header">▸ CERTIFICATIONS</div><ul class="bullet-list">';
+                portfolio.certifications.forEach(cert => {
+                    output += `<li>${cert}</li>`;
+                });
+                output += '</ul>';
+                return output;
+            },
+
+            contact: () => {
+                return `
+<div class="section-header">▸ CONTACT INFORMATION</div>
+<div class="output">
+📧 Email: <a href="mailto:${portfolio.profile.email}">${portfolio.profile.email}</a>
+📱 Phone: <a href="tel:${portfolio.profile.phone}">${portfolio.profile.phone}</a>
+💻 GitHub: <a href="https://${portfolio.profile.github}" target="_blank">${portfolio.profile.github}</a>
+📍 Location: ${portfolio.profile.location}
+</div>
+                `;
+            },
+
+            all: () => {
+                return commands.about() + commands.experience() + commands.projects() + 
+                       commands.skills() + commands.education() + commands.certifications() + 
+                       commands.contact();
+            },
+
+            clear: () => {
+                terminalOutput.innerHTML = '';
+                return '';
+            },
+
+            whoami: () => {
+                return `<div class="success">${portfolio.profile.name} - ${portfolio.profile.role}</div>`;
+            },
+
+            ls: () => {
+                return `
+<div class="output">
+Available sections:
+  <span class="info">about/</span>          <span class="info">experience/</span>      <span class="info">projects/</span>
+  <span class="info">skills/</span>         <span class="info">education/</span>       <span class="info">certifications/</span>
+  <span class="info">contact/</span>        <span class="info">all/</span>
+</div>
+                `;
+            },
+
+            neofetch: () => {
+                return `
+<div class="ascii-art">${asciiArt}</div>
+<div class="output" style="margin-top: 10px;">
+<span class="success">Name:</span>      ${portfolio.profile.name}
+<span class="success">Role:</span>      ${portfolio.profile.role}
+<span class="success">Location:</span>  ${portfolio.profile.location}
+<span class="success">Shell:</span>     portfolio-terminal 1.0
+<span class="success">Uptime:</span>    3+ years in AI/ML
+<span class="success">Skills:</span>    Python, FastAPI, LangChain, RAG Pipelines
+</div>
+                `;
+            }
+        };
+
+        // Initialize terminal
+        function init() {
+            typeWriter(`
+<div class="ascii-art">${asciiArt}</div>
+<div class="output">
+<span class="success">Welcome to Shivam's Interactive Portfolio Terminal!</span>
+<span class="info">Type 'help' to see available commands or 'all' to view complete portfolio.</span>
+<span class="warning">Initializing AI systems...</span>
+<span class="loading">[████████████████████████████████████] 100%</span>
+<span class="success">✓ System ready!</span>
+</div>
+            `, 0);
+        }
+
+        // Type writer effect
+        function typeWriter(text, index) {
+            if (index === 0) {
+                const div = document.createElement('div');
+                div.innerHTML = text;
+                terminalOutput.appendChild(div);
+                terminalOutput.scrollTop = terminalOutput.scrollHeight;
+            }
+        }
+
+        // Add output to terminal
+        function addOutput(text, className = 'output') {
+            const div = document.createElement('div');
+            div.className = className;
+            div.innerHTML = text;
+            terminalOutput.appendChild(div);
+            terminalOutput.scrollTop = terminalOutput.scrollHeight;
+        }
+
+        // Process command
+        function processCommand(input) {
+            const trimmedInput = input.trim().toLowerCase();
+            
+            // Show command
+            addOutput(`<span class="prompt">shivam@portfolio:~$</span> <span class="command">${input}</span>`, 'output-line');
+            
+            // Execute command
+            if (commands[trimmedInput]) {
+                const result = commands[trimmedInput]();
+                if (result) addOutput(result);
+            } else if (trimmedInput === '') {
+                // Do nothing for empty input
+            } else {
+                addOutput(`<span class="error">Command not found: ${input}</span><br><span class="info">Type 'help' for available commands.</span>`);
+            }
+        }
+
+        // Event listeners
+        terminalInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const input = terminalInput.value;
+                if (input.trim()) {
+                    commandHistory.unshift(input);
+                    historyIndex = -1;
+                }
+                processCommand(input);
+                terminalInput.value = '';
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (historyIndex < commandHistory.length - 1) {
+                    historyIndex++;
+                    terminalInput.value = commandHistory[historyIndex];
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    terminalInput.value = commandHistory[historyIndex];
+                } else {
+                    historyIndex = -1;
+                    terminalInput.value = '';
+                }
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                const input = terminalInput.value.toLowerCase();
+                const matches = Object.keys(commands).filter(cmd => cmd.startsWith(input));
+                if (matches.length === 1) {
+                    terminalInput.value = matches[0];
+                }
+            }
+        });
+
+        // Keep input focused
+        document.addEventListener('click', () => {
+            terminalInput.focus();
+        });
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            setTimeout(init, 500);
+        });
+    </script>
+</body>
+</html>
